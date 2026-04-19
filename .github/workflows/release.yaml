@@ -236,7 +236,7 @@ jobs:
           end
           FORMULA
 
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/rkivalin/tap.git" tap-repo
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/rkivalin/homebrew-tap.git" tap-repo
           cp dnsforge.rb tap-repo/dnsforge.rb
           cd tap-repo
           git config user.name "github-actions[bot]"
