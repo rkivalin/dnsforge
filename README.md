@@ -27,6 +27,12 @@ cargo install --path .
 makepkg -si
 ```
 
+### macOS (Homebrew)
+
+```sh
+brew install rkivalin/tap/dnsforge
+```
+
 ### Debian/Ubuntu
 
 ```sh

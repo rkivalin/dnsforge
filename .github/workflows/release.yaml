@@ -12,7 +12,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-linux:
     strategy:
       matrix:
         include:
@@ -49,7 +49,7 @@ jobs:
       - name: Package binary
         run: |
           cd "target/${{ matrix.target }}/release"
-          tar czf "../../../dnsforge-${{ matrix.arch }}.tar.gz" dnsforge
+          tar czf "../../../dnsforge-linux-${{ matrix.arch }}.tar.gz" dnsforge
           cd ../../..
 
       - name: Build .deb
@@ -79,10 +79,45 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: build-${{ matrix.arch }}
+          name: build-linux-${{ matrix.arch }}
           path: |
-            dnsforge-${{ matrix.arch }}.tar.gz
+            dnsforge-linux-${{ matrix.arch }}.tar.gz
             *.deb
+
+  build-macos:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+            arch: amd64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+
+      - name: Build
+        run: cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Run tests
+        run: cargo test --locked
+
+      - name: Package binary
+        run: |
+          cd "target/${{ matrix.target }}/release"
+          tar czf "../../../dnsforge-macos-${{ matrix.arch }}.tar.gz" dnsforge
+          cd ../../..
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-macos-${{ matrix.arch }}
+          path: dnsforge-macos-${{ matrix.arch }}.tar.gz
 
   package-archlinux:
     runs-on: ubuntu-latest
@@ -106,7 +141,7 @@ jobs:
           path: "dnsforge-[0-9]*.pkg.tar.zst"
 
   release:
-    needs: [build, package-archlinux]
+    needs: [build-linux, build-macos, package-archlinux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -139,10 +174,12 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           mkdir release
-          cp artifacts/build-amd64/dnsforge-amd64.tar.gz release/
-          cp artifacts/build-arm64/dnsforge-arm64.tar.gz release/
-          cp artifacts/build-amd64/*.deb release/
-          cp artifacts/build-arm64/*.deb release/
+          cp artifacts/build-linux-amd64/dnsforge-linux-amd64.tar.gz release/
+          cp artifacts/build-linux-arm64/dnsforge-linux-arm64.tar.gz release/
+          cp artifacts/build-linux-amd64/*.deb release/
+          cp artifacts/build-linux-arm64/*.deb release/
+          cp artifacts/build-macos-amd64/dnsforge-macos-amd64.tar.gz release/
+          cp artifacts/build-macos-arm64/dnsforge-macos-arm64.tar.gz release/
           cp artifacts/archlinux-package/*.pkg.tar.zst release/
 
           cd release
@@ -153,3 +190,57 @@ jobs:
             --title "dnsforge ${VERSION}" \
             --notes-file /tmp/release-notes.md \
             release/*
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          SHA_AMD64=$(sha256sum release/dnsforge-macos-amd64.tar.gz | cut -d' ' -f1)
+          SHA_ARM64=$(sha256sum release/dnsforge-macos-arm64.tar.gz | cut -d' ' -f1)
+          SHA_LINUX_AMD64=$(sha256sum release/dnsforge-linux-amd64.tar.gz | cut -d' ' -f1)
+          SHA_LINUX_ARM64=$(sha256sum release/dnsforge-linux-arm64.tar.gz | cut -d' ' -f1)
+
+          cat >dnsforge.rb <<FORMULA
+          class Dnsforge < Formula
+            desc "Declarative DNS zone manager with Rhai scripting"
+            homepage "https://github.com/rkivalin/dnsforge"
+            version "${VERSION}"
+            license "MIT"
+
+            if OS.mac?
+              if Hardware::CPU.arm?
+                url "https://github.com/rkivalin/dnsforge/releases/download/v${VERSION}/dnsforge-macos-arm64.tar.gz"
+                sha256 "${SHA_ARM64}"
+              else
+                url "https://github.com/rkivalin/dnsforge/releases/download/v${VERSION}/dnsforge-macos-amd64.tar.gz"
+                sha256 "${SHA_AMD64}"
+              end
+            elsif OS.linux?
+              if Hardware::CPU.arm?
+                url "https://github.com/rkivalin/dnsforge/releases/download/v${VERSION}/dnsforge-linux-arm64.tar.gz"
+                sha256 "${SHA_LINUX_ARM64}"
+              else
+                url "https://github.com/rkivalin/dnsforge/releases/download/v${VERSION}/dnsforge-linux-amd64.tar.gz"
+                sha256 "${SHA_LINUX_AMD64}"
+              end
+            end
+
+            def install
+              bin.install "dnsforge"
+            end
+
+            test do
+              assert_match "Declarative DNS zone manager", shell_output("#{bin}/dnsforge --help")
+            end
+          end
+          FORMULA
+
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/rkivalin/tap.git" tap-repo
+          cp dnsforge.rb tap-repo/dnsforge.rb
+          cd tap-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dnsforge.rb
+          git commit -m "Update dnsforge to ${VERSION}"
+          git push
