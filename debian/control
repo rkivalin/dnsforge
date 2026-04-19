@@ -1,0 +1,16 @@
+Source: dnsforge
+Section: admin
+Priority: optional
+Maintainer: Roman Kivalin <roman@shl.dev>
+Build-Depends: debhelper-compat (= 13), cargo, rustc
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: dnsforge
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Declarative DNS zone manager with Rhai scripting
+ Dnsforge manages DNS zones declaratively using Rhai scripts.
+ It fetches current zone state via AXFR, computes a diff against
+ the desired state, and applies changes via RFC 2136 dynamic
+ updates with TSIG authentication.
