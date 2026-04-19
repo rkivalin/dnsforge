@@ -1,6 +1,6 @@
 # Maintainer: Roman Kivalin <roman@shl.dev>
 pkgname=dnsforge
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Declarative DNS zone manager with Rhai scripting'
 arch=('x86_64' 'aarch64')
