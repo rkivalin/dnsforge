@@ -1,6 +1,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use hickory_proto::rr::rdata::*;
 use hickory_proto::rr::{Name, RData, RecordType};
 use rhai::{Dynamic, Engine, EvalAltResult, Map};
@@ -245,6 +247,19 @@ pub fn register_builtins(engine: &mut Engine, state: SharedState) {
                 }
             };
             st.borrow_mut().add_record(name, RecordType::CAA, RData::CAA(caa))
+        });
+    }
+
+    // openpgpkey(name, base64_key) - RFC 7929
+    {
+        let st = state.clone();
+        engine.register_fn("openpgpkey", move |name: &str, key: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+            let stripped: String = key.chars().filter(|c| !c.is_whitespace()).collect();
+            let bytes = BASE64.decode(&stripped).map_err(|e| -> Box<EvalAltResult> {
+                format!("invalid base64 OPENPGPKEY data: {e}").into()
+            })?;
+            let pgp = OPENPGPKEY::new(bytes);
+            st.borrow_mut().add_record(name, RecordType::OPENPGPKEY, RData::OPENPGPKEY(pgp))
         });
     }
 

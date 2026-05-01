@@ -153,6 +153,7 @@ txt("name", "single string value");
 txt("name", "string1", "string2");       // Multi-string TXT (up to 4)
 srv("_sip._tcp", 10, 60, 5060, "sip.example.com.");
 caa("name", "issue", "letsencrypt.org");
+openpgpkey("4eaae75f...c2._openpgpkey", "mDMEY..."); // RFC 7929, base64 key
 ```
 
 ### Externally managed records

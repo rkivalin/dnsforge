@@ -4,6 +4,8 @@
 
 ### Features
 
+- OPENPGPKEY record support (RFC 7929) via `openpgpkey(name, base64_key)`
+
 ### Fixes
 
 ### Changes
