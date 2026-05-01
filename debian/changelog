@@ -1,3 +1,9 @@
+dnsforge (0.3.0-1) unstable; urgency=low
+
+  * No changes
+
+ -- Roman Kivalin <roman@shl.dev>  Fri, 01 May 2026 22:37:15 +0200
+
 dnsforge (0.2.0-1) unstable; urgency=low
 
   * Add OPENPGPKEY record support (RFC 7929)

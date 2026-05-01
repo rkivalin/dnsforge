@@ -1,14 +1,18 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.3.0 (unreleased)
 
 ### Features
-
-- OPENPGPKEY record support (RFC 7929) via `openpgpkey(name, base64_key)`
 
 ### Fixes
 
 ### Changes
+
+## 0.2.0 (2026-05-01)
+
+### Features
+
+- OPENPGPKEY record support (RFC 7929) via `openpgpkey(name, base64_key)`
 
 ## 0.1.0 (2026-04-19)
 
